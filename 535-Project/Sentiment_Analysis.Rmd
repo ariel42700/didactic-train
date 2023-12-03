@@ -42,16 +42,16 @@ library(tidyverse)
 library(janeaustenr)
 library(widyr)
 
-file_path <- "Cleaned_ronaldo_tweets.csv"
+file_path <- "data/Cleaned_ronaldo_tweets.csv"
 
 tweets_df <- read.csv(file_path)
 
 str(tweets_df)
 
 # load sentiment 
-positive = scan('resources/positive-words.txt', what = 'character', comment.char = ';')
+positive = scan('data/resources/positive-words.txt', what = 'character', comment.char = ';')
 
-negative = scan('resources/negative-words.txt', what = 'character', comment.char = ';')
+negative = scan('data/resources/negative-words.txt', what = 'character', comment.char = ';')
 # add your list of words below as you wish if missing in above read lists
 pos.words = c(positive,'upgrade','Congrats','prizes','prize','thanks','thnx',
               'Grt','gr8','plz','trending','recovering','brainstorm','leader')
