@@ -95,7 +95,7 @@ score.sentiment = function(sentences, pos.words, neg.words, .progress='none') {
   return(scores.df)
 }
 
-chunk_size <- 1000  # Adjust the size based on your preference
+chunk_size <- 100 # Adjust the size based on your preference
 
 # Get the number of chunks
 num_chunks <- ceiling(nrow(tweets_df) / chunk_size)
@@ -119,3 +119,19 @@ analysis %>%
   ggeasy::easy_center_title()
 ```
 
+## Bootstrapping Sentiment Analysis
+```{r bootstrap}
+# Bootstrap with 100 iterations
+bootstrap_results <- replicate(100, analysis$score)
+
+table(bootstrap_results)
+
+# creating df to graphically visualize distribution of results
+bootstrap_df <- data.frame(Sentiment_Score = c(bootstrap_results))
+  
+ggplot(bootstrap_df, aes(x = Sentiment_Score)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Sentiment Scores", x = "Sentiment Score", y = "Frequency")
+
+
+```
