@@ -3,6 +3,9 @@ title: "Sentiment Analysis"
 output: html_document
 date: "2023-12-01"
 ---
+```{r}
+
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -146,3 +149,77 @@ ggplot(bootstrap_df, aes(x = Sentiment_Score)) +
   geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Sentiment Scores", x = "Sentiment Score", y = "Frequency")
 ```
+```{r}
+# Filter tweets containing the word "good" or "great" using regex
+positive_tweets <- tweets_df[tweets_df$content %>% str_detect("(?i)\\b(good|great)\\b"), ]
+
+# Extract context around "good" or "great" using regex
+positive_tweets$context_around_good_great <- str_extract(positive_tweets$content, "(?i)\\b\\w+\\s+(good|great)\\s+\\w+\\b")
+
+positive_tweets <- na.omit(positive_tweets)
+
+# Display the positive tweets and the corresponding context
+print(positive_tweets[, c("content", "context_around_good_great")])
+
+
+```
+```{r}
+# Assign sentiment labels based on the presence of "not" or "no" in the context
+positive_tweets$sentiment <- ifelse(str_detect(positive_tweets$context_around_good_great, "(?i)\\b(not|no)\\b"), "negative", "positive")
+
+# Display the positive tweets, the corresponding context, and the assigned sentiment labels
+print(positive_tweets[, c("content", "context_around_good_great", "sentiment")])
+```
+
+```{r}
+# Count the number of tweets with negative sentiment
+num_negative_tweets <- sum(positive_tweets$sentiment == "negative")
+
+
+# Display the count of tweets with negative sentiment
+cat("Number of tweets with negative sentiment:", num_negative_tweets, "\n")
+```
+```{r}
+# Filter tweets containing the words "nasty," "disgusting," or "gross" using regex
+target_words <- c("nasty", "disgusting", "gross", "filthy")
+negative_tweets <- tweets_df[tweets_df$content %>% str_detect(paste0("(?i)\\b(", paste(target_words, collapse = "|"), ")\\b")), ]
+
+# Extract context around the matched words
+negative_tweets$context_around_words <- str_extract_all(negative_tweets$content, "(?i)(\\b\\w+\\s+\\w+\\s+\\b(?:nasty|disgusting|gross|filthy)\\b\\s+\\w+\\s+\\w+\\b)")
+
+# Flatten the list of contexts
+negative_tweets$context_around_words <- sapply(negative_tweets$context_around_words, function(x) paste(x, collapse = " | "))
+
+# Display the negative tweets and the context around the matched words
+print(negative_tweets[, c("content", "context_around_words")])
+
+```
+```{r}
+# Sample dataset
+text_data <- c(
+  "This restaurant serves nasty food, but the ambiance is great.",
+  "The movie was disgusting, but the cinematography was impressive.",
+  "The streets were filthy after the heavy rain.",
+  "The garbage bin smells gross; it needs to be emptied."
+)
+
+# Words to search for
+target_words <- c("nasty", "gross", "filthy", "disgusting")
+
+# Create a regex pattern for matching the target words
+regex_pattern <- paste0("(?i)\\b(?:", paste(target_words, collapse = "|"), ")\\b")
+
+# Extract context around the matched words
+context_around_words <- str_extract_all(text_data, paste0("(.{0,20}\\b", regex_pattern, "\\b.{0,20})"))
+
+# Flatten the list of contexts
+context_around_words <- sapply(context_around_words, function(x) paste(x, collapse = " | "))
+
+# Display the original text and the context around the matched words
+result_df <- data.frame(original_text = text_data, context_around_words)
+print(result_df)
+
+```
+
+
+
