@@ -10,29 +10,77 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-#Getting all the necessary libraries
-library(httr)
-library(jsonlite)
 library(twitteR)
+library(ROAuth)
+library(hms)
+library(lubridate) 
+library(tidytext)
+library(tm)
+library(wordcloud)
+library(igraph)
+library(glue)
+library(networkD3)
+library(rtweet)
+library(plyr)
+library(stringr)
+library(ggplot2)
+library(ggeasy)
+library(plotly)
+library(dplyr)  
+library(hms)
+library(lubridate) 
+library(magrittr)
+library(tidyverse)
+
 ```
 
 Next we gotta connect to the API:
 ```{r}
-# Setting the Twitter API credentials
-api_key <- ""
-api_secret_key <- ""
-access_token <- ""
-access_token_secret <- ""
-
-# Create the OAuth token
-oauth_token <- httr::oauth_token(
-  endpoint = oauth_endpoint(NULL, "oauth/request_token", "oauth/access_token"),
-  app = httr::oauth_app("twitter", api_key, api_secret_key),
-  credentials = httr::oauth_cred(
-    token = access_token,
-    token_secret = access_token_secret
-  )
-)
+#Note: Replace below with your credentials following above reference
+api_key <- "abS3Ogvqsjjxezy5DvMyb9I9k"
+api_secret <- "8JT0tycGKoBoUt6XtcvAp3Sy7RF0M5afBXinTLMnnfcBQAEuQ2"
+client_id <- "TmhyZTdBVS05Mm5VZG1WcEtMWm86MTpjaQ"
+client_secret <- "f07g0wZdpH9JszNEIHR31rQ10C43xG28A3FbiTbuRJ09jh7sUK"
 
 ```
+
+```{r}
+library(rtweet)
+token <- create_token(
+  app = "ArielLutati",
+  consumer_key = "TmhyZTdBVS05Mm5VZG1WcEtMWm86MTpjaQ",
+  consumer_secret = "f07g0wZdpH9JszNEIHR31rQ10C43xG28A3FbiTbuRJ09jh7sUK",
+  api
+)
+```
+```{r}
+auth <- rtweet_app()
+```
+
+
+
+
+```{r}
+auth_as(auth)
+
+```
+
+```{r}
+auth_save(auth, "ArielLutati")
+```
+```{r}
+# Search for tweets using a specific hashtag
+tweets <- search_tweets("the", n = 10, lang = "en", token = token)
+
+# Check if the data frame is not empty before accessing columns
+if (!is.null(tweets) && nrow(tweets) > 0) {
+  # Print the text of the tweets
+  for (tweet in tweets$text) {
+    print(tweet)
+  }
+} else {
+  cat("No tweets found.\n")
+}
+```
+
 
