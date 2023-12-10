@@ -55,10 +55,9 @@ negative = scan('data/resources/negative-words.txt', what = 'character', comment
 # add your list of words below as you wish if missing in above read lists
 pos.words = c(positive,'upgrade','Congrats','prizes','prize','thanks','thnx',
               'Grt','gr8','plz','trending','recovering','brainstorm','leader')
+
 neg.words = c(negative,'wtf','wait','waiting','epicfail','Fight','fighting',
               'arrest','no','not')
-
-
 ```
 
 ```{r}
@@ -105,6 +104,8 @@ print(num_chunks)
 ```
 
 ```{r}
+library(plotly)
+
 cleanText <- tweets_df$content
 analysis <- score.sentiment(cleanText, pos.words, neg.words)
 table(analysis$score)
@@ -117,5 +118,50 @@ analysis %>%
   xlab("sentiment score") +
   ggtitle("Distribution of Sentiment scores of the tweets") +
   ggeasy::easy_center_title()
+
+
+
+
+
+
 ```
 
+```{r}
+library(plotly)
+
+# Convert 'date' variable to datetime format
+tweets_df$date <- lubridate::as_datetime(tweets_df$date)
+
+# Extract date and sentiment score
+date_sentiment <- data.frame(date = tweets_df$date, sentiment = analysis$score)
+
+# Plot sentiment over time (ggplot)
+date_sentiment %>%
+  ggplot(aes(x = date, y = sentiment)) +
+  geom_line() +
+  ylab("Sentiment Score") +
+  xlab("Date") +
+  ggtitle("Sentiment Over Time") +
+  ggeasy::easy_center_title()
+
+# Plot sentiment over time using Plotly
+plot_ly(date_sentiment, x = ~date, y = ~sentiment, type = "scatter", mode = "lines") %>%
+  layout(
+    yaxis = list(title = "Sentiment Score"),
+    xaxis = list(title = "Date"),
+    title = "Sentiment Over Time"
+  )
+
+```
+
+
+```{r}
+unique_day_month_dates <- unique(format(tweets_df$date, "%d, %b"))
+
+# Print the list of unique day, month dates with tweets
+cat("Unique day, month dates with tweets:", unique_day_month_dates, "\n")
+
+
+
+
+```
