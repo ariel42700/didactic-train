@@ -44,6 +44,7 @@ library(magrittr)
 library(tidyverse)
 library(janeaustenr)
 library(widyr)
+library(boot)
 
 file_path <- "data/Cleaned_ronaldo_tweets.csv"
 
@@ -135,10 +136,6 @@ analysis %>%
 
 
 
-
-
-
-
 ```
 
 ```{r}
@@ -170,20 +167,60 @@ plot_ly(date_sentiment, x = ~date, y = ~sentiment, type = "scatter", mode = "lin
 ```
 
 
-## Bootstrapping Sentiment Analysis
+## Bootstrapping Pre-Regex
 ```{r bootstrap}
-# Bootstrap with 100 iterations
+# Bootstrap with 100 resamplings
 bootstrap_results <- replicate(100, analysis$score)
-
 table(bootstrap_results)
+
+# point estimate function
+calculate_statistics <- function(data, indices) {
+  bootstrap_sample <- data[indices]
+  
+  mean_value <- mean(bootstrap_sample)
+  std_dev <- sd(bootstrap_sample)
+  
+  return(c(mean_value, std_dev))
+}
+
+set.seed(123) 
+bootstrap_pt_estimates_data <- boot(data = bootstrap_results, statistic = calculate_statistics, R = 100)
+
+# Confidence intervals
+conf_intervals <- boot.ci(bootstrap_pt_estimates_data, type = "basic")  
+
+# Means, standard deviations
+means <- bootstrap_pt_estimates_data$t[, 1]
+std_devs <- bootstrap_pt_estimates_data$t[, 2]
+
+
+conf_intervals
+#means
+# std_devs
+
+# Create a density plot for standard deviations
+ggplot(data = NULL, aes(x = means)) +
+  geom_density(fill = "red", color = "black") +
+  labs(title = "Density Plot of Means", x = "Means") +
+  theme_minimal()
+
+# Create a density plot for standard deviations
+ggplot(data = NULL, aes(x = std_devs)) +
+  geom_density(fill = "red", color = "black") +
+  labs(title = "Density Plot of Standard Deviations", x = "Standard Deviation Values") +
+  theme_minimal()
+
 
 # creating df to graphically visualize distribution of results
 bootstrap_df <- data.frame(Sentiment_Score = c(bootstrap_results))
-  
+
+# Creating distribution for sentiment scores
 ggplot(bootstrap_df, aes(x = Sentiment_Score)) +
   geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Sentiment Scores", x = "Sentiment Score", y = "Frequency")
 ```
+
+## Regex 
 ```{r}
 # Filter tweets containing the word "good" or "great" using regex
 positive_tweets <- tweets_df[tweets_df$content %>% str_detect("(?i)\\b(good|great)\\b"), ]
