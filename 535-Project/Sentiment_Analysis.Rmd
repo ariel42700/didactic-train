@@ -44,6 +44,7 @@ library(magrittr)
 library(tidyverse)
 library(janeaustenr)
 library(widyr)
+library(plotly)
 
 file_path <- "data/Cleaned_ronaldo_tweets.csv"
 
@@ -63,10 +64,11 @@ neg.words = c(negative,'wtf','wait','waiting','epicfail','Fight','fighting',
 
 
 ```
-
-```{r Data Cleaning}
-
+```{r}
+cols <- colnames(tweets_df)
+print(cols)
 ```
+
 
 
 ```{r}
@@ -118,6 +120,10 @@ analysis <- score.sentiment(cleanText, pos.words, neg.words)
 table(analysis$score)
 
 
+```
+
+
+```{r}
 ```
 
 ```{r}
@@ -195,30 +201,21 @@ print(negative_tweets[, c("content", "context_around_words")])
 
 ```
 ```{r}
-# Sample dataset
-text_data <- c(
-  "This restaurant serves nasty food, but the ambiance is great.",
-  "The movie was disgusting, but the cinematography was impressive.",
-  "The streets were filthy after the heavy rain.",
-  "The garbage bin smells gross; it needs to be emptied."
+# Sample data (replace this with your actual data)
+tweets_df <- data.frame(
+  timestamp = seq(from = as.POSIXct("2022-04-09"), by = "hours", length.out = 100),
+  sentiment = sample(c("positive", "negative"), size = 100, replace = TRUE)
 )
 
-# Words to search for
-target_words <- c("nasty", "gross", "filthy", "disgusting")
+# Create a time series plot using Plotly
+plot <- tweets_df %>%
+  plot_ly(x = ~timestamp, y = ~sentiment, type = 'scatter', mode = 'lines', color = ~sentiment) %>%
+  layout(title = "Sentiment of Tweets Over Time",
+         xaxis = list(title = "Timestamp"),
+         yaxis = list(title = "Sentiment"))
 
-# Create a regex pattern for matching the target words
-regex_pattern <- paste0("(?i)\\b(?:", paste(target_words, collapse = "|"), ")\\b")
-
-# Extract context around the matched words
-context_around_words <- str_extract_all(text_data, paste0("(.{0,20}\\b", regex_pattern, "\\b.{0,20})"))
-
-# Flatten the list of contexts
-context_around_words <- sapply(context_around_words, function(x) paste(x, collapse = " | "))
-
-# Display the original text and the context around the matched words
-result_df <- data.frame(original_text = text_data, context_around_words)
-print(result_df)
-
+# Display the plot
+plot
 ```
 
 
