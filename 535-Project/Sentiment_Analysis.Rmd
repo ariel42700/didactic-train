@@ -44,7 +44,7 @@ library(magrittr)
 library(tidyverse)
 library(janeaustenr)
 library(widyr)
-library(plotly)
+
 
 file_path <- "data/Cleaned_ronaldo_tweets.csv"
 
@@ -59,10 +59,9 @@ negative = scan('data/resources/negative-words.txt', what = 'character', comment
 # add your list of words below as you wish if missing in above read lists
 pos.words = c(positive,'upgrade','Congrats','prizes','prize','thanks','thnx',
               'Grt','gr8','plz','trending','recovering','brainstorm','leader')
+
 neg.words = c(negative,'wtf','wait','waiting','epicfail','Fight','fighting',
               'arrest','no','not')
-
-
 ```
 ```{r}
 cols <- colnames(tweets_df)
@@ -115,6 +114,8 @@ print(num_chunks)
 ```
 
 ```{r}
+library(plotly)
+
 cleanText <- tweets_df$content
 analysis <- score.sentiment(cleanText, pos.words, neg.words)
 table(analysis$score)
@@ -137,24 +138,94 @@ analysis %>%
   ggtitle("Distribution of Sentiment Scores of the Tweets") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +  # Add vertical line at score 0
   ggeasy::easy_center_title()
+
+
+
+```
+
+```{r}
+library(plotly)
+
+# Convert 'date' variable to datetime format
+tweets_df$date <- lubridate::as_datetime(tweets_df$date)
+
+# Extract date and sentiment score
+date_sentiment <- data.frame(date = tweets_df$date, sentiment = analysis$score)
+
+# Plot sentiment over time (ggplot)
+date_sentiment %>%
+  ggplot(aes(x = date, y = sentiment)) +
+  geom_line() +
+  ylab("Sentiment Score") +
+  xlab("Date") +
+  ggtitle("Sentiment Over Time") +
+  ggeasy::easy_center_title()
+
+# Plot sentiment over time using Plotly
+plot_ly(date_sentiment, x = ~date, y = ~sentiment, type = "scatter", mode = "lines") %>%
+  layout(
+    yaxis = list(title = "Sentiment Score"),
+    xaxis = list(title = "Date"),
+    title = "Sentiment Over Time"
+  )
   
 ```
 
 
-## Bootstrapping Sentiment Analysis
+## Bootstrapping Pre-Regex
 ```{r bootstrap}
-# Bootstrap with 100 iterations
+# Bootstrap with 100 resamplings
 bootstrap_results <- replicate(100, analysis$score)
-
 table(bootstrap_results)
+
+# point estimate function
+calculate_statistics <- function(data, indices) {
+  bootstrap_sample <- data[indices]
+  
+  mean_value <- mean(bootstrap_sample)
+  std_dev <- sd(bootstrap_sample)
+  
+  return(c(mean_value, std_dev))
+}
+
+set.seed(123) 
+bootstrap_pt_estimates_data <- boot(data = bootstrap_results, statistic = calculate_statistics, R = 100)
+
+# Confidence intervals
+conf_intervals <- boot.ci(bootstrap_pt_estimates_data, type = "basic")  
+
+# Means, standard deviations
+means <- bootstrap_pt_estimates_data$t[, 1]
+std_devs <- bootstrap_pt_estimates_data$t[, 2]
+
+
+conf_intervals
+#means
+# std_devs
+
+# Create a density plot for standard deviations
+ggplot(data = NULL, aes(x = means)) +
+  geom_density(fill = "red", color = "black") +
+  labs(title = "Density Plot of Means", x = "Means") +
+  theme_minimal()
+
+# Create a density plot for standard deviations
+ggplot(data = NULL, aes(x = std_devs)) +
+  geom_density(fill = "red", color = "black") +
+  labs(title = "Density Plot of Standard Deviations", x = "Standard Deviation Values") +
+  theme_minimal()
+
 
 # creating df to graphically visualize distribution of results
 bootstrap_df <- data.frame(Sentiment_Score = c(bootstrap_results))
-  
+
+# Creating distribution for sentiment scores
 ggplot(bootstrap_df, aes(x = Sentiment_Score)) +
   geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Sentiment Scores", x = "Sentiment Score", y = "Frequency")
 ```
+
+## Regex 
 ```{r}
 # Filter tweets containing the word "good" or "great" using regex
 positive_tweets <- tweets_df[tweets_df$content %>% str_detect("(?i)\\b(good|great)\\b"), ]
@@ -185,6 +256,7 @@ num_negative_tweets <- sum(positive_tweets$sentiment == "negative")
 # Display the count of tweets with negative sentiment
 cat("Number of tweets with negative sentiment:", num_negative_tweets, "\n")
 ```
+
 ```{r}
 # Filter tweets containing the words "nasty," "disgusting," or "gross" using regex
 target_words <- c("nasty", "disgusting", "gross", "filthy")
@@ -214,9 +286,20 @@ plot <- tweets_df %>%
          xaxis = list(title = "Timestamp"),
          yaxis = list(title = "Sentiment"))
 
-# Display the plot
-plot
+
 ```
 
 
+```{r}
+unique_day_month_dates <- unique(format(tweets_df$date, "%d, %b"))
 
+# Print the list of unique day, month dates with tweets
+cat("Unique day, month dates with tweets:", unique_day_month_dates, "\n")
+
+
+
+
+```
+=======
+
+>>>>>>> 1274135ac8fe0c6b1ba4c892437b5d4e6be58972
