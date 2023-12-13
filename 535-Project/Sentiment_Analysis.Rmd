@@ -32,6 +32,7 @@ library(glue)
 library(networkD3)
 library(plyr)
 library(stringr)
+library(stringi)
 library(ggplot2)
 library(ggeasy)
 library(plotly)
@@ -52,20 +53,15 @@ str(tweets_df)
 
 # load sentiment 
 positive = scan('data/resources/positive-words.txt', what = 'character', comment.char = ';')
-
+positive_slang_positive <- scan('data/resources/positive-soccer-words.txt', what = 'character', comment.char = ';') 
 negative = scan('data/resources/negative-words.txt', what = 'character', comment.char = ';')
 # add your list of words below as you wish if missing in above read lists
 # Positive slang words in soccer
-soccer_slang_positive <- c("clinical", "maestro", "magician", "engine", "silky",
-                           "baller", "wizard", "slick", "dynamic", "classy",
-                           "Precision", "Poise", "Artistry", "Masterful", 
-                           "craftsman", "visionary", "sportsmanship", 
-                           "crisp", "grit", "majestic", "filthy")
 # Negative soccer slang words vector
 soccer_slang_negative <- c("flopper", "diver", "choker", "lazy", "flop", "wasteful",
                             "slump", "hoofball", "showboating", "hack", "stagnant",
                             "sloppy", "lackluster", "soft", "bottler", "whiner",
-                            "inconsistent", "flat-footed", "stiff", "disjointed", "jaded", "shafted")
+                            "inconsistent", "flat-footed", "stiff", "disjointed", "jaded", "shafted", "shite")
 
 # Print the vector
 print(soccer_slang_negative)
@@ -78,7 +74,7 @@ pos.words = c(positive, new_positive_words,'upgrade','Congrats','prizes','prize'
               'grt','gr8','plz','trending','recovering','brainstorm','leader')
 
 neg.words = c(negative, new_negative_words, 'wtf','wait','waiting','epicfail','fight','fighting',
-              'arrest','no','not')
+              'arrest','no','not', "mfker", "mf")
 ```
 
 ```{r}
@@ -107,6 +103,7 @@ readable_dates <- as.POSIXct(missing_days)
 print(readable_dates)
 
 ```
+
 ```{r}
 # Assuming tweets_df$date is already in POSIXct format
 
@@ -168,20 +165,12 @@ score.sentiment = function(sentences, pos.words, neg.words, .progress='none') {
     # convert to lower case:
     sentence = tolower(sentence)
     
-    # split into words. str_split is in the stringr package
-    word.list = str_split(sentence, '\\s+')
-    # sometimes a list() is one level of hierarchy too much
-    words = unlist(word.list)
+    # use regex to extract words
+    words = str_extract_all(sentence, "\\b\\w+\\b") %>% unlist()
     
     # compare our words to the dictionaries of positive & negative terms
-    pos.matches = match(words, pos.words)
-    neg.matches = match(words, neg.words)
-    
-    # match() returns the position of the matched term or NA
-    # we just want a TRUE/FALSE:
-    pos.matches = !is.na(pos.matches)
-    neg.matches = !is.na(neg.matches)
-    
+    pos.matches = words %in% pos.words
+    neg.matches = words %in% neg.words
     
     # Create a logical vector indicating positive words preceded by negative words
     decrease_score_mask <- pos.matches & c(FALSE, head(neg.matches, -1))
@@ -206,17 +195,109 @@ print(num_chunks)
 
 ```{r}
 library(plotly)
-
 cleanText <- tweets_df$content
 analysis <- score.sentiment(cleanText, pos.words, neg.words)
 table(analysis$score)
 
 
 ```
+```{r}
+library(purrr)
+
+# Define a function to perform sentiment analysis on a subset
+perform_sentiment_analysis <- function(text, pos.words, neg.words) {
+  score.sentiment(text, pos.words, neg.words)$score
+}
+
+# Use purrr::map to apply the sentiment analysis function to each subset
+subset_sentiments <- map(consecutive_data_subsets, ~perform_sentiment_analysis(.x$content, pos.words, neg.words))
+```
+
+```{r}
+library(ggplot2)
+
+# Assuming subset_sentiments is a list of numeric vectors
+
+# Plot each subset's density curve for all scores
+subset_density_plots <- lapply(seq_along(subset_sentiments), function(i) {
+  subset_mean <- mean(subset_sentiments[[i]])
+  
+  ggplot(data.frame(Sentiment_Score = subset_sentiments[[i]]), aes(x = Sentiment_Score)) +
+    geom_density(fill = i, alpha = 0.5) +
+    geom_vline(xintercept = subset_mean, linetype = "dashed", color = "red") +
+    geom_text(aes(x = subset_mean, label = sprintf("Mean: %.2f", subset_mean)),
+              y = 0, vjust = -1, color = "red", size = 3) +  # Add label for mean
+    labs(title = paste("Subset", i, "Sentiment Score Density"), x = "Sentiment Score", y = "Density") +
+    theme_minimal()
+})
+
+# Plot the overall density curve for all scores
+overall_scores <- unlist(subset_sentiments)
+overall_mean <- mean(overall_scores)
+overall_density_plot <- ggplot(data.frame(Sentiment_Score = overall_scores), aes(x = Sentiment_Score)) +
+  geom_density(fill = "blue", alpha = 0.5) +
+  geom_vline(xintercept = overall_mean, linetype = "dashed", color = "red") +
+  geom_text(aes(x = overall_mean, label = sprintf("Mean: %.2f", overall_mean)),
+            y = 0, vjust = -1, color = "red", size = 3) +  # Add label for mean
+  labs(title = "Overall Sentiment Score Density", x = "Sentiment Score", y = "Density") +
+  theme_minimal()
+
+# Print each subset's density plot along with the overall plot
+for (i in seq_along(subset_density_plots)) {
+  print(subset_density_plots[[i]])
+}
+
+print(overall_density_plot)
+
+```
+
+```{r}
+library(ggplot2)
+
+# Assuming subset_sentiments is a list of numeric vectors
+
+# Calculate mean sentiments for each subset
+subset_means <- sapply(subset_sentiments, mean)
+
+# Find the index of the subset with the highest mean sentiment
+subset_highest_mean_index <- which.max(subset_means)
+
+# Find the index of the subset with the lowest mean sentiment
+subset_lowest_mean_index <- which.min(subset_means)
+
+# Plot the subset with the highest mean sentiment
+subset_highest_mean_plot <- ggplot(data.frame(Sentiment_Score = subset_sentiments[[subset_highest_mean_index]]), 
+                                   aes(x = Sentiment_Score)) +
+  geom_density(fill = subset_highest_mean_index, alpha = 0.5) +
+  geom_vline(xintercept = subset_means[subset_highest_mean_index], linetype = "dashed", color = "red") +
+  geom_text(aes(x = subset_means[subset_highest_mean_index], 
+                label = sprintf("Mean: %.2f", subset_means[subset_highest_mean_index])),
+            y = 0, vjust = -1, color = "red", size = 3) +  # Add label for mean
+  labs(title = paste("Subset", subset_highest_mean_index, "Sentiment Score Density"), 
+       x = "Sentiment Score", y = "Density") +
+  theme_minimal()
+
+# Plot the subset with the lowest mean sentiment
+subset_lowest_mean_plot <- ggplot(data.frame(Sentiment_Score = subset_sentiments[[subset_lowest_mean_index]]), 
+                                  aes(x = Sentiment_Score)) +
+  geom_density(fill = subset_lowest_mean_index, alpha = 0.5) +
+  geom_vline(xintercept = subset_means[subset_lowest_mean_index], linetype = "dashed", color = "red") +
+  geom_text(aes(x = subset_means[subset_lowest_mean_index], 
+                label = sprintf("Mean: %.2f", subset_means[subset_lowest_mean_index])),
+            y = 0, vjust = -1, color = "red", size = 3) +  # Add label for mean
+  labs(title = paste("Subset", subset_lowest_mean_index, "Sentiment Score Density"), 
+       x = "Sentiment Score", y = "Density") +
+  theme_minimal()
+
+# Print the plots
+print(subset_highest_mean_plot)
+print(subset_lowest_mean_plot)
+
+```
+
 
 
 ```{r}
-# plot of sentiment frequencies
 analysis %>%
   ggplot(aes(x=score)) +
   geom_histogram(binwidth = 1, fill = "lightblue", color = "white") +
@@ -224,10 +305,7 @@ analysis %>%
   ylab("Frequency/Density") +
   xlab("Sentiment Score") +
   ggtitle("Distribution of Sentiment Scores of the Tweets") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +  # Add vertical line at score 0
-  ggeasy::easy_center_title()
-
-
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red")  # Add vertical line at score 0
 
 ```
 
@@ -313,56 +391,7 @@ ggplot(bootstrap_df, aes(x = Sentiment_Score)) +
   labs(title = "Distribution of Sentiment Scores", x = "Sentiment Score", y = "Frequency")
 ```
 
-## Regex 
-```{r}
-# Filter tweets containing the word "good" or "great" using regex
-positive_tweets <- tweets_df[tweets_df$content %>% str_detect("(?i)\\b(good|great)\\b"), ]
 
-# Extract context around "good" or "great" using regex
-positive_tweets$context_around_good_great <- str_extract(positive_tweets$content, "(?i)\\b\\w+\\s+(good|great)\\s+\\w+\\b")
-
-positive_tweets <- na.omit(positive_tweets)
-
-# Display the positive tweets and the corresponding context
-print(positive_tweets[, c("content", "context_around_good_great")])
-
-
-```
-```{r}
-# Assign sentiment labels based on the presence of "not" or "no" in the context
-positive_tweets$sentiment <- ifelse(str_detect(positive_tweets$context_around_good_great, "(?i)\\b(not|no)\\b"), "negative", "positive")
-
-# Display the positive tweets, the corresponding context, and the assigned sentiment labels
-print(positive_tweets[, c("content", "context_around_good_great", "sentiment")])
-```
-
-```{r}
-
-```
-
-```{r}
-# Filter tweets containing the words "nasty," "disgusting," or "gross" using regex
-target_words <- c("nasty", "disgusting", "gross", "filthy")
-negative_tweets <- tweets_df[tweets_df$content %>% str_detect(paste0("(?i)\\b(", paste(target_words, collapse = "|"), ")\\b")), ]
-
-# Extract context around the matched words
-negative_tweets$context_around_words <- str_extract_all(negative_tweets$content, "(?i)(\\b\\w+\\s+\\w+\\s+\\b(?:nasty|disgusting|gross|filthy)\\b\\s+\\w+\\s+\\w+\\b)")
-
-# Flatten the list of contexts
-negative_tweets$context_around_words <- sapply(negative_tweets$context_around_words, function(x) paste(x, collapse = " | "))
-
-# Display the negative tweets and the context around the matched words
-print(negative_tweets[, c("content", "context_around_words")])
-
-```
-```{r}
-# Count the number of tweets with negative sentiment
-num_negative_tweets <- sum(positive_tweets$sentiment == "negative")
-
-
-# Display the count of tweets with negative sentiment
-cat("Number of tweets with negative sentiment:", num_negative_tweets, "\n")
-```
 
 ```{r}
 # Sample data (replace this with your actual data)
@@ -392,6 +421,4 @@ cat("Unique day, month dates with tweets:", unique_day_month_dates, "\n")
 
 
 ```
-=======
 
->>>>>>> 1274135ac8fe0c6b1ba4c892437b5d4e6be58972
