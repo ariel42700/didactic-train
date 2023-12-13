@@ -65,8 +65,27 @@ neg.words = c(negative,'wtf','wait','waiting','epicfail','Fight','fighting',
 ```
 
 ```{r}
-cols <- colnames(tweets_df)
-print(cols)
+# Identify indices where there are jumps in dates
+jump_indices <- which(diff(tweets_df$date) > 1)
+
+# Add the last index to create the end of the last subset
+jump_indices <- c(jump_indices, nrow(tweets_df))
+
+# Split the data into subsets based on jump indices
+data_subsets <- lapply(seq_along(jump_indices), function(i) {
+  start_index <- ifelse(i == 1, 1, jump_indices[i - 1] + 1)
+  end_index <- jump_indices[i]
+  subset <- tweets_df[start_index:end_index, ]
+  return(subset)
+})
+
+# Print the subsets
+for (i in seq_along(data_subsets)) {
+  cat("Subset", i, ":\n")
+  print(data_subsets[[i]])
+  cat("\n")
+}
+
 ```
 
 
