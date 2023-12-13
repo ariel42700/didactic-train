@@ -57,10 +57,29 @@ positive = scan('data/resources/positive-words.txt', what = 'character', comment
 
 negative = scan('data/resources/negative-words.txt', what = 'character', comment.char = ';')
 # add your list of words below as you wish if missing in above read lists
-pos.words = c(positive,'upgrade','Congrats','prizes','prize','thanks','thnx',
+# Positive slang words in soccer
+soccer_slang_positive <- c("clinical", "maestro", "magician", "engine", "silky",
+                           "baller", "wizard", "slick", "dynamic", "classy",
+                           "Precision", "Poise", "Artistry", "Masterful", 
+                           "craftsman", "visionary", "sportsmanship", 
+                           "crisp", "grit", "majestic")
+# Negative soccer slang words vector
+soccer_slang_negative <- c("flopper", "diver", "choker", "lazy", "flop", "wasteful",
+                            "slump", "hoofball", "showboating", "hack", "stagnant",
+                            "sloppy", "lackluster", "soft", "bottler", "whiner",
+                            "inconsistent", "flat-footed", "stiff", "disjointed", "jaded", "shafted")
+
+# Print the vector
+print(soccer_slang_negative)
+
+# Ensure soccer_slang_positive words are not already in pos.words
+new_positive_words <- soccer_slang_positive[!soccer_slang_positive %in% positive]
+new_negative_words <- soccer_slang_positive[!soccer_slang_negative %in% negative]
+
+pos.words = c(positive, new_positive_words,'upgrade','Congrats','prizes','prize','thanks','thnx',
               'Grt','gr8','plz','trending','recovering','brainstorm','leader')
 
-neg.words = c(negative,'wtf','wait','waiting','epicfail','Fight','fighting',
+neg.words = c(negative, new_negative_words, 'wtf','wait','waiting','epicfail','Fight','fighting',
               'arrest','no','not')
 ```
 
