@@ -63,6 +63,7 @@ pos.words = c(positive,'upgrade','Congrats','prizes','prize','thanks','thnx',
 neg.words = c(negative,'wtf','wait','waiting','epicfail','Fight','fighting',
               'arrest','no','not')
 ```
+
 ```{r}
 cols <- colnames(tweets_df)
 print(cols)
@@ -125,6 +126,11 @@ table(analysis$score)
 
 
 ```{r}
+# Function to get the words preceding positive words
+get_preceding_words <- function(text, positive_word) {
+  preceding_words <- str_extract_all(text, paste0("(\\w+\\s+\\w+\\s+)\\b", positive_word, "\\b"))
+  return(preceding_words)
+}
 ```
 
 ```{r}
@@ -249,12 +255,7 @@ print(positive_tweets[, c("content", "context_around_good_great", "sentiment")])
 ```
 
 ```{r}
-# Count the number of tweets with negative sentiment
-num_negative_tweets <- sum(positive_tweets$sentiment == "negative")
 
-
-# Display the count of tweets with negative sentiment
-cat("Number of tweets with negative sentiment:", num_negative_tweets, "\n")
 ```
 
 ```{r}
@@ -272,6 +273,15 @@ negative_tweets$context_around_words <- sapply(negative_tweets$context_around_wo
 print(negative_tweets[, c("content", "context_around_words")])
 
 ```
+```{r}
+# Count the number of tweets with negative sentiment
+num_negative_tweets <- sum(positive_tweets$sentiment == "negative")
+
+
+# Display the count of tweets with negative sentiment
+cat("Number of tweets with negative sentiment:", num_negative_tweets, "\n")
+```
+
 ```{r}
 # Sample data (replace this with your actual data)
 tweets_df <- data.frame(
