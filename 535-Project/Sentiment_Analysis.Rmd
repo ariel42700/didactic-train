@@ -3,9 +3,7 @@ title: "Sentiment Analysis"
 output: html_document
 date: "2023-12-01"
 ---
-```{r}
 
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -62,7 +60,7 @@ soccer_slang_positive <- c("clinical", "maestro", "magician", "engine", "silky",
                            "baller", "wizard", "slick", "dynamic", "classy",
                            "Precision", "Poise", "Artistry", "Masterful", 
                            "craftsman", "visionary", "sportsmanship", 
-                           "crisp", "grit", "majestic")
+                           "crisp", "grit", "majestic", "filthy")
 # Negative soccer slang words vector
 soccer_slang_negative <- c("flopper", "diver", "choker", "lazy", "flop", "wasteful",
                             "slump", "hoofball", "showboating", "hack", "stagnant",
@@ -77,35 +75,86 @@ new_positive_words <- soccer_slang_positive[!soccer_slang_positive %in% positive
 new_negative_words <- soccer_slang_positive[!soccer_slang_negative %in% negative]
 
 pos.words = c(positive, new_positive_words,'upgrade','Congrats','prizes','prize','thanks','thnx',
-              'Grt','gr8','plz','trending','recovering','brainstorm','leader')
+              'grt','gr8','plz','trending','recovering','brainstorm','leader')
 
-neg.words = c(negative, new_negative_words, 'wtf','wait','waiting','epicfail','Fight','fighting',
+neg.words = c(negative, new_negative_words, 'wtf','wait','waiting','epicfail','fight','fighting',
               'arrest','no','not')
 ```
 
 ```{r}
-# Identify indices where there are jumps in dates
-jump_indices <- which(diff(tweets_df$date) > 1)
+# Convert 'date' variable to DateTime format
+tweets_df$date <- ymd_hms(tweets_df$date)
 
-# Add the last index to create the end of the last subset
-jump_indices <- c(jump_indices, nrow(tweets_df))
+# Generate a sequence of all days within the range of your data
+all_days <- seq(min(tweets_df$date), max(tweets_df$date), by = "day")
 
-# Split the data into subsets based on jump indices
-data_subsets <- lapply(seq_along(jump_indices), function(i) {
-  start_index <- ifelse(i == 1, 1, jump_indices[i - 1] + 1)
-  end_index <- jump_indices[i]
-  subset <- tweets_df[start_index:end_index, ]
-  return(subset)
-})
+# Identify missing days
+missing_days <- setdiff(all_days, tweets_df$date)
+
+# Print missing days
+if (length(missing_days) > 0) {
+  cat("Missing days:\n")
+  print(missing_days)
+} else {
+  cat("No missing days found.\n")
+}
+```
+```{r}
+# Example conversion of Unix timestamps to human-readable dates
+readable_dates <- as.POSIXct(missing_days)
+
+# Print the converted dates
+print(readable_dates)
+
+```
+```{r}
+# Assuming tweets_df$date is already in POSIXct format
+
+# Find the unique dates in the dataset
+unique_dates <- unique(as.Date(tweets_df$date))
+
+# Initialize a list to store subsets
+consecutive_data_subsets <- list()
+
+# Loop through the unique dates
+for (i in seq_along(unique_dates)) {
+  # Find the consecutive dates until a gap is detected
+  consecutive_dates <- unique_dates[i]
+  
+  while ((consecutive_dates[length(consecutive_dates)] + 1) %in% unique_dates) {
+    consecutive_dates <- c(consecutive_dates, consecutive_dates[length(consecutive_dates)] + 1)
+  }
+  
+  # Identify the indices corresponding to the consecutive dates
+  indices <- which(as.Date(tweets_df$date) %in% consecutive_dates)
+  
+  # Add the subset to the list
+  consecutive_data_subsets[[i]] <- tweets_df[indices, ]
+}
 
 # Print the subsets
-for (i in seq_along(data_subsets)) {
+for (i in seq_along(consecutive_data_subsets)) {
   cat("Subset", i, ":\n")
-  print(data_subsets[[i]])
+  print(consecutive_data_subsets[[i]])
   cat("\n")
 }
 
 ```
+```{r}
+# Assuming consecutive_data_subsets is a list of subsets
+
+# Print the range of dates for each subset in a human-readable format
+for (i in seq_along(consecutive_data_subsets)) {
+  subset_range <- range(consecutive_data_subsets[[i]]$date)
+  formatted_range <- format(subset_range, "%Y-%m-%d %H:%M:%S")
+  cat("Subset", i, "Date Range: ", formatted_range[1], " to ", formatted_range[2], "\n")
+}
+
+```
+
+
+
+
 
 
 
@@ -133,8 +182,11 @@ score.sentiment = function(sentences, pos.words, neg.words, .progress='none') {
     pos.matches = !is.na(pos.matches)
     neg.matches = !is.na(neg.matches)
     
-    # TRUE/FALSE will be treated as 1/0 by sum():
-    score = sum(pos.matches) - sum(neg.matches)
+    
+    # Create a logical vector indicating positive words preceded by negative words
+    decrease_score_mask <- pos.matches & c(FALSE, head(neg.matches, -1))
+    
+    score <- sum(pos.matches) - sum(neg.matches) - sum(decrease_score_mask)
     
     return(score)
   }, pos.words, neg.words, .progress=.progress )
@@ -162,14 +214,6 @@ table(analysis$score)
 
 ```
 
-
-```{r}
-# Function to get the words preceding positive words
-get_preceding_words <- function(text, positive_word) {
-  preceding_words <- str_extract_all(text, paste0("(\\w+\\s+\\w+\\s+)\\b", positive_word, "\\b"))
-  return(preceding_words)
-}
-```
 
 ```{r}
 # plot of sentiment frequencies
